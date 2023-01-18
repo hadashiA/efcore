@@ -88,6 +88,135 @@ public abstract class JsonQueryAdHocTestBase : NonSharedModelTestBase
 
     #endregion
 
+    #region 30062
+
+    protected abstract void Seed30062(MyContext30062 ctx);
+
+    protected class MyContext30062 : DbContext
+    {
+        public MyContext30062(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<MyEntity30062> Entities { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<MyEntity30062>(b =>
+            {
+                b.Property(x => x.Id).ValueGeneratedNever();
+                b.OwnsOne(x => x.Json, nb =>
+                {
+                    nb.ToJson();
+                    nb.OwnsMany(x => x.Collection, nnb => nnb.OwnsOne(x => x.Nested));
+                    nb.OwnsOne(x => x.OptionalReference, nnb => nnb.OwnsOne(x => x.Nested));
+                    nb.OwnsOne(x => x.RequiredReference, nnb => nnb.OwnsOne(x => x.Nested));
+                    nb.Navigation(x => x.RequiredReference).IsRequired();
+                });
+            });
+        }
+    }
+
+    public class MyEntity30062
+    {
+        public int Id { get; set; }
+        public MyJsonRootEntity30062 Json { get; set; }
+    }
+
+    public class MyJsonRootEntity30062
+    {
+        public string RootName { get; set; }
+        public MyJsonBranchEntity30062 RequiredReference { get; set; }
+        public MyJsonBranchEntity30062 OptionalReference { get; set; }
+        public List<MyJsonBranchEntity30062> Collection { get; set; }
+    }
+
+    public class MyJsonBranchEntity30062
+    {
+        public string BranchName { get; set; }
+        public MyJsonLeafEntity30062 Nested { get; set; }
+    }
+
+    public class MyJsonLeafEntity30062
+    {
+        public string LeafName { get; set; }
+    }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Accessing_missing_navigation_works(bool async)
+    {
+        var contextFactory = await InitializeAsync<MyContext30062>(seed: Seed30062);
+        using (var context = contextFactory.CreateContext())
+        {
+            var result = context.Entities.OrderBy(x => x.Id).ToList();
+            Assert.Equal(4, result.Count);
+            Assert.NotNull(result[0].Json.Collection);
+            Assert.NotNull(result[0].Json.OptionalReference);
+            Assert.NotNull(result[0].Json.RequiredReference);
+
+            Assert.Null(result[1].Json.Collection);
+            Assert.NotNull(result[1].Json.OptionalReference);
+            Assert.NotNull(result[1].Json.RequiredReference);
+
+            Assert.NotNull(result[2].Json.Collection);
+            Assert.Null(result[2].Json.OptionalReference);
+            Assert.NotNull(result[2].Json.RequiredReference);
+
+            Assert.NotNull(result[3].Json.Collection);
+            Assert.NotNull(result[3].Json.OptionalReference);
+            Assert.Null(result[3].Json.RequiredReference);
+        }
+    }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Missing_navigation_works_with_deduplication(bool async)
+    {
+        var contextFactory = await InitializeAsync<MyContext30062>(seed: Seed30062);
+        using (var context = contextFactory.CreateContext())
+        {
+            var result = context.Entities.OrderBy(x => x.Id).Select(x => new
+            {
+                x,
+                x.Json,
+                x.Json.OptionalReference,
+                x.Json.RequiredReference,
+                NestedOptional = x.Json.OptionalReference.Nested,
+                NestedRequired = x.Json.RequiredReference.Nested,
+                x.Json.Collection,
+            }).ToList();
+
+            Assert.Equal(4, result.Count);
+            Assert.NotNull(result[0].OptionalReference);
+            Assert.NotNull(result[0].RequiredReference);
+            Assert.NotNull(result[0].NestedOptional);
+            Assert.NotNull(result[0].NestedRequired);
+            Assert.NotNull(result[0].Collection);
+
+            Assert.NotNull(result[1].OptionalReference);
+            Assert.NotNull(result[1].RequiredReference);
+            Assert.NotNull(result[1].NestedOptional);
+            Assert.NotNull(result[1].NestedRequired);
+            Assert.Null(result[1].Collection);
+
+            Assert.Null(result[2].OptionalReference);
+            Assert.NotNull(result[2].RequiredReference);
+            Assert.Null(result[2].NestedOptional);
+            Assert.NotNull(result[2].NestedRequired);
+            Assert.NotNull(result[2].Collection);
+
+            Assert.NotNull(result[3].OptionalReference);
+            Assert.Null(result[3].RequiredReference);
+            Assert.NotNull(result[3].NestedOptional);
+            Assert.Null(result[3].NestedRequired);
+            Assert.NotNull(result[3].Collection);
+        }
+    }
+
+    #endregion
+
     #region ArrayOfPrimitives
 
     [ConditionalTheory]
