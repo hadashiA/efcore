@@ -14,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Internal;
 /// </summary>
 public class SqliteQueryTranslationPostprocessor : RelationalQueryTranslationPostprocessor
 {
-    private readonly ApplyValidatingVisitor _applyValidator = new();
+    private readonly ValidatingVisitor _validator = new();
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -39,12 +39,12 @@ public class SqliteQueryTranslationPostprocessor : RelationalQueryTranslationPos
     public override Expression Process(Expression query)
     {
         var result = base.Process(query);
-        _applyValidator.Visit(result);
+        _validator.Visit(result);
 
         return result;
     }
 
-    private sealed class ApplyValidatingVisitor : ExpressionVisitor
+    private sealed class ValidatingVisitor : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
         {
@@ -60,6 +60,14 @@ public class SqliteQueryTranslationPostprocessor : RelationalQueryTranslationPos
                 && selectExpression.Tables.Any(t => t is CrossApplyExpression || t is OuterApplyExpression))
             {
                 throw new InvalidOperationException(SqliteStrings.ApplyNotSupported);
+            }
+
+            if (extensionExpression is JsonScalarExpression jsonScalarExpression
+                && jsonScalarExpression.Path.Any(x => x.ArrayIndex is not null and not SqlConstantExpression))
+            {
+                throw new InvalidOperationException(
+                    SqliteStrings.NonConstantJsonArrayIndexNotSupported(
+                        jsonScalarExpression.JsonColumn.Name));
             }
 
             return base.VisitExtension(extensionExpression);

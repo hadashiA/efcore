@@ -117,4 +117,70 @@ public class SqliteQuerySqlGenerator : QuerySqlGenerator
 
         return regexpExpression;
     }
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    protected override Expression VisitJsonScalar(JsonScalarExpression jsonScalarExpression)
+    {
+        if (jsonScalarExpression.Path.Count == 1
+            && jsonScalarExpression.Path[0].ToString() == "$")
+        {
+            Visit(jsonScalarExpression.JsonColumn);
+
+            return jsonScalarExpression;
+        }
+
+        // TODO: need casts?
+        Sql.Append("json_extract(");
+
+        Visit(jsonScalarExpression.JsonColumn);
+
+        Sql.Append(",'");
+        foreach (var pathSegment in jsonScalarExpression.Path)
+        {
+            if (pathSegment.PropertyName != null)
+            {
+                Sql.Append((pathSegment.PropertyName == "$" ? "" : ".") + pathSegment.PropertyName);
+            }
+
+            if (pathSegment.ArrayIndex != null)
+            {
+                Sql.Append("[");
+
+                if (pathSegment.ArrayIndex is SqlConstantExpression)
+                {
+                    Visit(pathSegment.ArrayIndex);
+                }
+                else
+                {
+                    Sql.Append("' + ");
+                    Visit(pathSegment.ArrayIndex);
+                    Sql.Append(" + '");
+                    //throw new InvalidOperationException("TODO");
+                    //Sql.Append("' + CAST(");
+                    //Visit(pathSegment.ArrayIndex);
+                    //Sql.Append(" AS ");
+                    //Sql.Append(_typeMappingSource.GetMapping(typeof(string)).StoreType);
+                    //Sql.Append(") + '");
+                }
+
+                Sql.Append("]");
+            }
+        }
+
+        Sql.Append("')");
+
+        //if (jsonScalarExpression.TypeMapping is not SqlServerJsonTypeMapping and not StringTypeMapping)
+        //{
+        //    Sql.Append(" AS ");
+        //    Sql.Append(jsonScalarExpression.TypeMapping!.StoreType);
+        //    Sql.Append(")");
+        //}
+
+        return jsonScalarExpression;
+    }
 }

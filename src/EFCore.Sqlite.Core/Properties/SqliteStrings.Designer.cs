@@ -74,6 +74,14 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Internal
             => GetString("MigrationScriptGenerationNotSupported");
 
         /// <summary>
+        ///     JSON array element can only be accessed using constant value for the array index. Non-constant value is being used in PATH for JSON column '{jsonColumnName}'.
+        /// </summary>
+        public static string NonConstantJsonArrayIndexNotSupported(object? jsonColumnName)
+            => string.Format(
+                GetString("NonConstantJsonArrayIndexNotSupported", nameof(jsonColumnName)),
+                jsonColumnName);
+
+        /// <summary>
         ///     SQLite does not support expressions of type '{type}' in ORDER BY clauses. Convert the values to a supported type, or use LINQ to Objects to order the results on the client side.
         /// </summary>
         public static string OrderByNotSupported(object? type)

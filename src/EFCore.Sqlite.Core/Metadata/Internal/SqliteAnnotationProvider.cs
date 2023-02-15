@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Sqlite.Metadata.Internal;
@@ -47,24 +48,28 @@ public class SqliteAnnotationProvider : RelationalAnnotationProvider
     /// </summary>
     public override IEnumerable<IAnnotation> For(IColumn column, bool designTime)
     {
-        // Model validation ensures that these facets are the same on all mapped properties
-        var property = column.PropertyMappings.First().Property;
-        // Only return auto increment for integer single column primary key
-        var primaryKey = property.DeclaringEntityType.FindPrimaryKey();
-        if (primaryKey != null
-            && primaryKey.Properties.Count == 1
-            && primaryKey.Properties[0] == property
-            && property.ValueGenerated == ValueGenerated.OnAdd
-            && property.ClrType.UnwrapNullableType().IsInteger()
-            && !HasConverter(property))
+        // JSON columns have no property mappings so all annotations that rely on property mappings should be skipped for them
+        if (column is not JsonColumn)
         {
-            yield return new Annotation(SqliteAnnotationNames.Autoincrement, true);
-        }
+            // Model validation ensures that these facets are the same on all mapped properties
+            var property = column.PropertyMappings.First().Property;
+            // Only return auto increment for integer single column primary key
+            var primaryKey = property.DeclaringEntityType.FindPrimaryKey();
+            if (primaryKey != null
+                && primaryKey.Properties.Count == 1
+                && primaryKey.Properties[0] == property
+                && property.ValueGenerated == ValueGenerated.OnAdd
+                && property.ClrType.UnwrapNullableType().IsInteger()
+                && !HasConverter(property))
+            {
+                yield return new Annotation(SqliteAnnotationNames.Autoincrement, true);
+            }
 
-        var srid = property.GetSrid();
-        if (srid != null)
-        {
-            yield return new Annotation(SqliteAnnotationNames.Srid, srid);
+            var srid = property.GetSrid();
+            if (srid != null)
+            {
+                yield return new Annotation(SqliteAnnotationNames.Srid, srid);
+            }
         }
     }
 
