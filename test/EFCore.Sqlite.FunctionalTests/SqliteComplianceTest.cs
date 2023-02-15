@@ -8,7 +8,6 @@ public class SqliteComplianceTest : RelationalComplianceTestBase
     protected override ICollection<Type> IgnoredTestBases { get; } = new HashSet<Type>
     {
         typeof(FromSqlSprocQueryTestBase<>),
-        typeof(JsonUpdateTestBase<>),
         typeof(SqlExecutorTestBase<>),
         typeof(UdfDbFunctionTestBase<>),
         typeof(TPCRelationshipsQueryTestBase<>), // internal class is added
