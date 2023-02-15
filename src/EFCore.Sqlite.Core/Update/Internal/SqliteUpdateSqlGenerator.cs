@@ -4,6 +4,7 @@
 using System.Text;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Sqlite.Internal;
+using Microsoft.EntityFrameworkCore.Update;
 
 namespace Microsoft.EntityFrameworkCore.Sqlite.Update.Internal;
 
@@ -142,6 +143,63 @@ public class SqliteUpdateSqlGenerator : UpdateAndSelectSqlGenerator
     /// </summary>
     public override string GenerateNextSequenceValueOperation(string name, string? schema)
         => throw new NotSupportedException(SqliteStrings.SequencesNotSupported);
+
+
+    /// <inheritdoc />
+    protected override void AppendUpdateColumnValue(
+        ISqlGenerationHelper updateSqlGeneratorHelper,
+        IColumnModification columnModification,
+        StringBuilder stringBuilder,
+        string name,
+        string? schema)
+    {
+        if (columnModification.JsonPath != null
+            && columnModification.JsonPath != "$")
+        {
+
+            stringBuilder.Append("json_set(");
+            updateSqlGeneratorHelper.DelimitIdentifier(stringBuilder, columnModification.ColumnName);
+            stringBuilder.Append(", '");
+
+            //stringBuilder.Append(", 'strict ");
+            stringBuilder.Append(columnModification.JsonPath);
+            stringBuilder.Append("', ");
+
+            if (columnModification.Property != null)
+            {
+                //var needsTypeConversion = columnModification.Property.ClrType.IsNumeric()
+                //    || columnModification.Property.ClrType == typeof(bool);
+
+                //if (needsTypeConversion)
+                //{
+                //    stringBuilder.Append("CAST(");
+                //}
+
+                stringBuilder.Append("json_extract(");
+                base.AppendUpdateColumnValue(updateSqlGeneratorHelper, columnModification, stringBuilder, name, schema);
+                stringBuilder.Append(", '$[0]')");
+
+                //if (needsTypeConversion)
+                //{
+                //    stringBuilder.Append(" AS ");
+                //    stringBuilder.Append(columnModification.Property.GetRelationalTypeMapping().StoreType);
+                //    stringBuilder.Append(")");
+                //}
+            }
+            else
+            {
+                stringBuilder.Append("json_extract(");
+                base.AppendUpdateColumnValue(updateSqlGeneratorHelper, columnModification, stringBuilder, name, schema);
+                stringBuilder.Append(")");
+            }
+
+            stringBuilder.Append(")");
+        }
+        else
+        {
+            base.AppendUpdateColumnValue(updateSqlGeneratorHelper, columnModification, stringBuilder, name, schema);
+        }
+    }
 
     private bool CanUseReturningClause(IReadOnlyModificationCommand command)
         => _isReturningClauseSupported && command.Table?.IsSqlReturningClauseUsed() == true;

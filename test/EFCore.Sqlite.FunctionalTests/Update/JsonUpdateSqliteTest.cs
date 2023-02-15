@@ -307,16 +307,15 @@ FROM [JsonEntitiesBasic] AS [j]
 @p0='["Modified"]' (Nullable = false) (Size = 12)
 @p1='1'
 
-SET IMPLICIT_TRANSACTIONS OFF;
-SET NOCOUNT ON;
-UPDATE [JsonEntitiesBasic] SET [OwnedCollectionRoot] = JSON_MODIFY([OwnedCollectionRoot], 'strict $[0].Name', JSON_VALUE(@p0, '$[0]'))
-OUTPUT 1
-WHERE [Id] = @p1;
+UPDATE "JsonEntitiesBasic" SET "OwnedCollectionRoot" = json_set("OwnedCollectionRoot", '$[0].Name', json_extract(@p0, '$[0]'))
+WHERE "Id" = @p1
+RETURNING 1;
 """,
                 //
                 """
-SELECT TOP(2) [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot]
-FROM [JsonEntitiesBasic] AS [j]
+SELECT "j"."Id", "j"."EntityBasicId", "j"."Name", "j"."OwnedCollectionRoot", "j"."OwnedReferenceRoot"
+FROM "JsonEntitiesBasic" AS "j"
+LIMIT 2
 """);
     }
 
