@@ -18,17 +18,21 @@ namespace System.Data.Common
                 .GetMethod("BeginTransactionAsync", new[] { typeof(IsolationLevel), typeof(CancellationToken) });
             if (beginTransactionAsync != null)
             {
-                var connection = Expression.Parameter(typeof(DbConnection), "connection");
-                var isolationLevel = Expression.Parameter(typeof(IsolationLevel), "isolationLevel");
-                var cancellationToken = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
-
-                _beginTransactionAsync = Expression
-                    .Lambda<Func<DbConnection, IsolationLevel, CancellationToken, ValueTask<DbTransaction>>>(
-                        Expression.Call(connection, beginTransactionAsync, isolationLevel, cancellationToken),
-                        connection,
-                        isolationLevel,
-                        cancellationToken)
-                    .Compile();
+                // var connection = Expression.Parameter(typeof(DbConnection), "connection");
+                // var isolationLevel = Expression.Parameter(typeof(IsolationLevel), "isolationLevel");
+                // var cancellationToken = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
+                //
+                // _beginTransactionAsync = Expression
+                //     .Lambda<Func<DbConnection, IsolationLevel, CancellationToken, ValueTask<DbTransaction>>>(
+                //         Expression.Call(connection, beginTransactionAsync, isolationLevel, cancellationToken),
+                //         connection,
+                //         isolationLevel,
+                //         cancellationToken)
+                //     .Compile();
+                _beginTransactionAsync = (connection, level, cancellationToken) =>
+                {
+                    return (ValueTask<DbTransaction>)beginTransactionAsync.Invoke(connection, new object[] { level, cancellationToken });
+                };
             }
             else
             {
@@ -38,11 +42,12 @@ namespace System.Data.Common
             var closeAsync = typeof(DbConnection).GetMethod("CloseAsync", Type.EmptyTypes);
             if (closeAsync != null)
             {
-                var connection = Expression.Parameter(typeof(DbConnection), "connection");
-
-                _closeAsync = Expression
-                    .Lambda<Func<DbConnection, Task>>(Expression.Call(connection, closeAsync), connection)
-                    .Compile();
+                // var connection = Expression.Parameter(typeof(DbConnection), "connection");
+                //
+                // _closeAsync = Expression
+                //     .Lambda<Func<DbConnection, Task>>(Expression.Call(connection, closeAsync), connection)
+                //     .Compile();
+                _closeAsync = connection => (Task)closeAsync.Invoke(connection, Array.Empty<object>());
             }
             else
             {
