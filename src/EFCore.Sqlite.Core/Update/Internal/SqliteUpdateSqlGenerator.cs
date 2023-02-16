@@ -160,31 +160,14 @@ public class SqliteUpdateSqlGenerator : UpdateAndSelectSqlGenerator
             stringBuilder.Append("json_set(");
             updateSqlGeneratorHelper.DelimitIdentifier(stringBuilder, columnModification.ColumnName);
             stringBuilder.Append(", '");
-
-            //stringBuilder.Append(", 'strict ");
             stringBuilder.Append(columnModification.JsonPath);
             stringBuilder.Append("', ");
 
             if (columnModification.Property != null)
             {
-                //var needsTypeConversion = columnModification.Property.ClrType.IsNumeric()
-                //    || columnModification.Property.ClrType == typeof(bool);
-
-                //if (needsTypeConversion)
-                //{
-                //    stringBuilder.Append("CAST(");
-                //}
-
                 stringBuilder.Append("json_extract(");
                 base.AppendUpdateColumnValue(updateSqlGeneratorHelper, columnModification, stringBuilder, name, schema);
                 stringBuilder.Append(", '$[0]')");
-
-                //if (needsTypeConversion)
-                //{
-                //    stringBuilder.Append(" AS ");
-                //    stringBuilder.Append(columnModification.Property.GetRelationalTypeMapping().StoreType);
-                //    stringBuilder.Append(")");
-                //}
             }
             else
             {
