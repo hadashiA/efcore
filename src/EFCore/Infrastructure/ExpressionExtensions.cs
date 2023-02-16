@@ -70,7 +70,8 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
             if (memberExpression.Member is FieldInfo fieldInfo
                 && fieldInfo.IsInitOnly)
             {
-                if (new FrameworkName(AppContext.TargetFrameworkName).Identifier == ".NETFramework")
+                // if (new FrameworkName(AppContext.TargetFrameworkName).Identifier == ".NETFramework")
+                if (true)
                 {
                     // On .NET Framework the compiler refuses to compile an expression tree with IsInitOnly access,
                     // so use Reflection's SetValue instead.
@@ -83,12 +84,12 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure
                             typeof(object)));
                 }
 
-                return (BinaryExpression)Activator.CreateInstance(
-                    _assignBinaryExpressionType,
-                    BindingFlags.NonPublic | BindingFlags.Instance,
-                    null,
-                    new object[] { memberExpression, valueExpression },
-                    null);
+                // return (BinaryExpression)Activator.CreateInstance(
+                //     _assignBinaryExpressionType,
+                //     BindingFlags.NonPublic | BindingFlags.Instance,
+                //     null,
+                //     new object[] { memberExpression, valueExpression },
+                //     null);
             }
 
             return Expression.Assign(memberExpression, valueExpression);
